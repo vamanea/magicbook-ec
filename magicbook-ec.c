@@ -460,7 +460,51 @@ static struct attribute *magicbook_ec_attrs[] = {
 };
 ATTRIBUTE_GROUPS(magicbook_ec);
 
+static ssize_t charge_control_thresholds_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct magicbook_ec *ec = i2c_get_clientdata(client);
+	u8 resp[8];
+	int ret, start = 0, end = 0;
 
+	ret = qcom_ec_read(ec, 0x6e, 2, resp);
+	if (ret < 0)
+		return ret;
+
+	start = resp[0];
+	end = resp[1];
+	return sysfs_emit(buf, "%d %d\n", start, end);
+}
+
+static ssize_t charge_control_thresholds_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	int start, end;
+
+	if (sscanf(buf, "%d %d", &start, &end) != 2)
+		return -EINVAL;
+
+	// err = huawei_wmi_battery_set(start, end);
+	// if (err)
+	// 	return err;
+
+	return size;
+}
+
+static DEVICE_ATTR_RW(charge_control_thresholds);
+
+static int ec_battery_setup(struct device *dev)
+{
+	return device_create_file(dev, &dev_attr_charge_control_thresholds);
+}
+
+static void ec_battery_exit(struct device *dev)
+{
+	device_remove_file(dev, &dev_attr_charge_control_thresholds);
+}
 
 static int ec_kbd_backlight_probe(struct magicbook_ec *ec)
 {
@@ -526,11 +570,7 @@ static int magicbook_ec_probe(struct i2c_client *client)
 					IRQF_ONESHOT, "magicbook_ec", ec);
 	if (ret < 0)
 		return dev_err_probe(dev, ret, "Unable to request irq\n");
-
 	i2c_set_clientdata(client, ec);
-	ec->ec_cdev = devm_kcalloc(dev, 1, sizeof(*ec->ec_cdev), GFP_KERNEL);
-	if (!ec->ec_cdev)
-		return -ENOMEM;
 
 	scnprintf(ec->name, sizeof(ec->name), "qcom_ec");
 
@@ -544,6 +584,10 @@ static int magicbook_ec_probe(struct i2c_client *client)
 				     "Failed to register the EC hwmon device\n");
 	}
 
+	ret = ec_battery_setup(dev);
+	if (ret < 0)
+		return dev_err_probe(dev, ret, "Failed to setup battery attributes\n");
+
 	ret = i2c_smbus_write_byte_data(client, EC_IRQ_ENABLE_REG, 0x01);
 	if (ret < 0)
 		return dev_err_probe(dev, ret, "Failed to enable interrupts\n");
@@ -554,11 +598,13 @@ static int magicbook_ec_probe(struct i2c_client *client)
 static void magicbook_ec_remove(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
-	int ret;
 
+	int ret;
 	ret = i2c_smbus_write_byte_data(client, EC_IRQ_ENABLE_REG, 0x00);
 	if (ret < 0)
 		dev_err(dev, "Failed to disable interrupts: %d\n", ret);
+
+	ec_battery_exit(dev);
 }
 
 static int magicbook_ec_suspend(struct device *dev)
