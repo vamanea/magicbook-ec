@@ -431,7 +431,7 @@ static SENSOR_DEVICE_ATTR_RO(temp6_label, label, 8);
 static SENSOR_DEVICE_ATTR_2(temp7_input, 0444, temp_input_show, NULL, 0x1c, 0);
 static SENSOR_DEVICE_ATTR_RO(temp7_label, label, 9);
 /* Group the attributes */
-static struct attribute *simple_fan_attrs[] = {
+static struct attribute *magicbook_ec_attrs[] = {
 	&sensor_dev_attr_fan1_input.dev_attr.attr,
 	&sensor_dev_attr_fan1_target.dev_attr.attr,
 	&sensor_dev_attr_fan1_label.dev_attr.attr,
@@ -458,7 +458,7 @@ static struct attribute *simple_fan_attrs[] = {
 	&sensor_dev_attr_temp7_label.dev_attr.attr,
 	NULL
 };
-ATTRIBUTE_GROUPS(simple_fan);
+ATTRIBUTE_GROUPS(magicbook_ec);
 
 
 
@@ -537,7 +537,7 @@ static int magicbook_ec_probe(struct i2c_client *client)
 	ec->cdev = devm_hwmon_device_register_with_groups(dev,
 						   ec->name,
 						   ec,
-						   simple_fan_groups);
+						   magicbook_ec_groups);
 
 	if (IS_ERR(ec->cdev)) {
 		return dev_err_probe(dev, PTR_ERR(ec->cdev),
