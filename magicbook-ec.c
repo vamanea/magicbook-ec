@@ -18,6 +18,7 @@
 #define EC_FAN_DBG_CONTROL_CMD	0x30
 #define EC_SCI_EVT_CONTROL_CMD	0x35
 #define EC_THERMAL_CAP_CMD	0x42
+#define EC_KEYBD_BACKLIGHT_CMD  0x53
 
 #define EC_FAN_NAME_SIZE	20
 
@@ -215,15 +216,15 @@ static enum led_brightness ec_kbd_bl_get(struct led_classdev *led_cdev)
 	u8 resp[8];
 	u8 brightness;
 	int ret;
-	ret = qcom_ec_read(ec, 0x53, 1, resp);
+	ret = qcom_ec_read(ec, EC_KEYBD_BACKLIGHT_CMD, 1, resp);
 	if (ret < 0) {
 		dev_err(ec->dev, "Failed to read response from keyboard backligth register");
 		return ret;
 	}
 	brightness = resp[0];
-	dev_info(ec->dev, "Reported brightnes: %u", brightness);
+	dev_dbg(ec->dev, "Reported brightnes: %u", brightness);
 	if (brightness == 0xF) {
-		return 2;
+		return brightness;
 	} else if (brightness <= 2) {
 		return 0;
 	} else if (brightness > 4) {
@@ -240,13 +241,13 @@ static int ec_kbd_bl_set(struct led_classdev *led_cdev,
 					  kbd_backlight);
 	int ret;
 
-	if (brightness >= 0 && brightness <= 2) {
+	if (brightness >= 0 && brightness <= led_cdev->max_brightness) {
 		brightness += 2;
 	} else if (brightness != 0xF) {
 		brightness = 2;
 	}
 
-	ret = qcom_ec_write(ec, 0x53, 0x2, brightness);
+	ret = qcom_ec_write(ec, EC_KEYBD_BACKLIGHT_CMD, 0x2, brightness);
 	if (ret < 0) {
 		dev_err(ec->dev, "Failed to write  keyboard backligth register");
 		return ret;
@@ -256,8 +257,11 @@ static int ec_kbd_bl_set(struct led_classdev *led_cdev,
 
 static void ec_kbd_bl_update(struct magicbook_ec *ec)
 {
-	ec->kbd_brightness =  ec_kbd_bl_get(&ec->kbd_backlight);;
-	led_classdev_notify_brightness_hw_changed(&ec->kbd_backlight, ec->kbd_brightness);
+	ec->kbd_brightness = ec_kbd_bl_get(&ec->kbd_backlight);
+	// The EC reports 0xF as auto backligth, in this case don't notify
+	if (ec->kbd_brightness <= ec->kbd_backlight.max_brightness) {
+		led_classdev_notify_brightness_hw_changed(&ec->kbd_backlight, ec->kbd_brightness);
+	}
 }
 
 static irqreturn_t magicbook_ec_irq(int irq, void *data)
@@ -465,12 +469,12 @@ static int ec_kbd_backlight_probe(struct magicbook_ec *ec)
 	ec->kbd_backlight.max_brightness = 2;
 	ec->kbd_backlight.brightness_get = ec_kbd_bl_get;
 	ec->kbd_backlight.brightness_set_blocking = ec_kbd_bl_set;
-	ec->kbd_brightness = 0xF; // Auto
+	ec->kbd_brightness = 0x2; // Auto
 
 	return devm_led_classdev_register(ec->dev, &ec->kbd_backlight);
 }
 
-static int magicbook_ec_input_probe(struct magicbook_ec *ec)
+static int ec_input_probe(struct magicbook_ec *ec)
 {
 	int ret;
 
@@ -509,7 +513,7 @@ static int magicbook_ec_probe(struct i2c_client *client)
 	ec->client = client;
 	mutex_init(&ec->lock);
 
-	ret = magicbook_ec_input_probe(ec);
+	ret = ec_input_probe(ec);
 	if (ret < 0)
 		return ret;
 
