@@ -5,6 +5,7 @@
 #include <linux/module.h>
 #include <linux/i2c.h>
 #include <linux/thermal.h>
+#include <linux/delay.h>
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/input.h>
@@ -496,8 +497,74 @@ static ssize_t charge_control_thresholds_store(struct device *dev,
 
 static DEVICE_ATTR_RW(charge_control_thresholds);
 
+
+static ssize_t kbd_backlight_level_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct magicbook_ec *ec = i2c_get_clientdata(client);
+	int ret; u8 level;
+
+	ret = kstrtou8(buf, 50, &level);
+	if (ret)
+		return ret;
+
+	ret = qcom_ec_write(ec, 0x67 /* SKBL */ ,0x1, level);
+	if (ret < 0)
+		return ret;
+
+	return size;
+}
+
+static ssize_t kbd_backlight_timeout_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct magicbook_ec *ec = i2c_get_clientdata(client);
+	u8 resp[8];
+	int ret;
+
+	ret = qcom_ec_read(ec, 0x54, 2, resp);
+	if (ret < 0)
+		return ret;
+
+	return sysfs_emit(buf, "%d\n", resp[1] << 8 | resp[0]);
+}
+
+static ssize_t kbd_backlight_timeout_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct magicbook_ec *ec = i2c_get_clientdata(client);
+	int ret;
+	u16 timeout;
+
+	ret = kstrtou16(buf, 0, &timeout);
+	if (ret)
+		return ret;
+
+	ret = qcom_ec_write(ec, 0x54 /* SKBT */ ,0x1, timeout & 0xFF);
+	if (ret < 0)
+		return ret;
+	msleep(5);
+	ret = qcom_ec_write(ec, 0x55 /* SKBT */ ,0x1, timeout >> 8);
+	if (ret < 0)
+		return ret;
+
+	return size;
+}
+
+static DEVICE_ATTR_WO(kbd_backlight_level);
+static DEVICE_ATTR_RW(kbd_backlight_timeout);
+
 static struct attribute *magicbook_ec_attrs[] = {
     &dev_attr_charge_control_thresholds.attr,
+
+    &dev_attr_kbd_backlight_level.attr,
+    &dev_attr_kbd_backlight_timeout.attr,
     NULL, // Must be null-terminated
 };
 
