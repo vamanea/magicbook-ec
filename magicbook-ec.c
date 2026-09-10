@@ -50,10 +50,7 @@ enum qcom_ec_sci_events {
 	EC_FAN2_SPEED_CHANGE_EVT,
 	EC_NEW_LUT_SET_EVT,
 	EC_FAN_PROFILE_SWITCH_EVT,
-	EC_THERMISTOR_1_THRESHOLD_CROSS_EVT,
-	EC_THERMISTOR_2_THRESHOLD_CROSS_EVT,
-	EC_THERMISTOR_3_THRESHOLD_CROSS_EVT,
-	/* Reserved: 0x39 - 0x3c/0x3f */
+	EC_THERMISTOR_THRESHOLD_CROSS_EVT = 0x36,
 	EC_RECOVERED_FROM_RESET_EVT = 0x3d,
 	/* 0x40 -> 0x46 thermal table updates */
 	EC_THERMAL_TABLE_NORMAL = 0x40,
@@ -72,7 +69,7 @@ enum qcom_ec_sci_events {
 };
 
 static char *sensor_labels[] = {
-	"Battery",
+	"Battery"
 	"CPU Fan",
 	"GPU Fan",
 	// The thermal zones are best effort guesses from the DSDT
@@ -316,15 +313,15 @@ static irqreturn_t magicbook_ec_irq(int irq, void *data)
 	case EC_FAN_PROFILE_SWITCH_EVT:
 		dev_dbg_ratelimited(dev, "FAN Profile switched\n");
 		break;
-	case EC_THERMISTOR_1_THRESHOLD_CROSS_EVT:
-		dev_dbg_ratelimited(dev, "Thermistor 1 threshold crossed\n");
-		break;
-	case EC_THERMISTOR_2_THRESHOLD_CROSS_EVT:
-		dev_dbg_ratelimited(dev, "Thermistor 2 threshold crossed\n");
-		break;
-	case EC_THERMISTOR_3_THRESHOLD_CROSS_EVT:
-		dev_dbg_ratelimited(dev, "Thermistor 3 threshold crossed\n");
-		break;
+	case EC_THERMISTOR_THRESHOLD_CROSS_EVT:
+	case EC_THERMISTOR_THRESHOLD_CROSS_EVT + 1:
+	case EC_THERMISTOR_THRESHOLD_CROSS_EVT + 2:
+	case EC_THERMISTOR_THRESHOLD_CROSS_EVT + 3:
+	case EC_THERMISTOR_THRESHOLD_CROSS_EVT + 4:
+	case EC_THERMISTOR_THRESHOLD_CROSS_EVT + 5:
+	case EC_THERMISTOR_THRESHOLD_CROSS_EVT + 6:
+		dev_dbg_ratelimited(dev, "Thermistor threshold crossed\n");
+			break;
 	case EC_RECOVERED_FROM_RESET_EVT:
 		dev_dbg_ratelimited(dev, "EC recovered from reset\n");
 		break;
