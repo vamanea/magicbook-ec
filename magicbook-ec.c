@@ -275,9 +275,9 @@ static irqreturn_t magicbook_ec_irq(int irq, void *data)
 	case EC_EVT_KEY_FN_SPACE0:
 	case EC_EVT_KEY_FN_SPACE1:
 	case EC_EVT_KEY_FN_SPACE2:
-	case EC_EVT_KEY_FN_SPACE3:
 		ec_kbd_bl_update(ec);
 		break;
+	case EC_EVT_KEY_FN_SPACE3:
 	case EC_EVT_KEY_FN_F7:
 	case EC_EVT_KEY_FN_F8:
 	case EC_EVT_KEY_FN_F10:
