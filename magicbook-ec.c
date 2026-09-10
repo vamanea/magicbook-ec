@@ -425,7 +425,7 @@ static SENSOR_DEVICE_ATTR_RO(temp6_label, label, 8);
 static SENSOR_DEVICE_ATTR_2(temp7_input, 0444, temp_input_show, NULL, 0x1c, 0);
 static SENSOR_DEVICE_ATTR_RO(temp7_label, label, 9);
 /* Group the attributes */
-static struct attribute *magicbook_ec_attrs[] = {
+static struct attribute *ec_sensors_attrs[] = {
 	&sensor_dev_attr_fan1_input.dev_attr.attr,
 	&sensor_dev_attr_fan1_target.dev_attr.attr,
 	&sensor_dev_attr_fan1_label.dev_attr.attr,
@@ -452,7 +452,7 @@ static struct attribute *magicbook_ec_attrs[] = {
 	&sensor_dev_attr_temp7_label.dev_attr.attr,
 	NULL
 };
-ATTRIBUTE_GROUPS(magicbook_ec);
+ATTRIBUTE_GROUPS(ec_sensors);
 
 static ssize_t charge_control_thresholds_show(struct device *dev,
 		struct device_attribute *attr,
@@ -496,15 +496,12 @@ static ssize_t charge_control_thresholds_store(struct device *dev,
 
 static DEVICE_ATTR_RW(charge_control_thresholds);
 
-static int ec_battery_setup(struct device *dev)
-{
-	return device_create_file(dev, &dev_attr_charge_control_thresholds);
-}
+static struct attribute *magicbook_ec_attrs[] = {
+    &dev_attr_charge_control_thresholds.attr,
+    NULL, // Must be null-terminated
+};
 
-static void ec_battery_exit(struct device *dev)
-{
-	device_remove_file(dev, &dev_attr_charge_control_thresholds);
-}
+ATTRIBUTE_GROUPS(magicbook_ec);
 
 static int ec_kbd_backlight_probe(struct magicbook_ec *ec)
 {
@@ -552,7 +549,6 @@ static int magicbook_ec_probe(struct i2c_client *client)
 	ec = devm_kzalloc(dev, sizeof(*ec), GFP_KERNEL);
 	if (!ec)
 		return -ENOMEM;
-
 	ec->dev = dev;
 	ec->client = client;
 	mutex_init(&ec->lock);
@@ -577,16 +573,12 @@ static int magicbook_ec_probe(struct i2c_client *client)
 	ec->cdev = devm_hwmon_device_register_with_groups(dev,
 						   ec->name,
 						   ec,
-						   magicbook_ec_groups);
+						   ec_sensors_groups);
 
 	if (IS_ERR(ec->cdev)) {
 		return dev_err_probe(dev, PTR_ERR(ec->cdev),
 				     "Failed to register the EC hwmon device\n");
 	}
-
-	ret = ec_battery_setup(dev);
-	if (ret < 0)
-		return dev_err_probe(dev, ret, "Failed to setup battery attributes\n");
 
 	ret = i2c_smbus_write_byte_data(client, EC_SCI_EVT_CONTROL_CMD, 0x01);
 	if (ret < 0)
@@ -603,8 +595,6 @@ static void magicbook_ec_remove(struct i2c_client *client)
 	ret = i2c_smbus_write_byte_data(client, EC_SCI_EVT_CONTROL_CMD, 0x00);
 	if (ret < 0)
 		dev_err(dev, "Failed to disable interrupts: %d\n", ret);
-
-	ec_battery_exit(dev);
 }
 
 static int magicbook_ec_suspend(struct device *dev)
@@ -680,6 +670,7 @@ static struct i2c_driver magicbook_ec_i2c_driver = {
 	.driver = {
 		.name = "magicbook-art-14-ec",
 		.of_match_table = magicbook_ec_of_match,
+        .dev_groups = magicbook_ec_groups,
 		.pm = &magicbook_ec_pm_ops
 	},
 	.probe = magicbook_ec_probe,
