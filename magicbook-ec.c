@@ -19,6 +19,7 @@
 #define EC_SCI_EVT_CONTROL_CMD	0x35
 #define EC_THERMAL_CAP_CMD	0x42
 #define EC_KEYBD_BACKLIGHT_CMD  0x53
+#define EC_CHARGE_THRESHOLD_CMD 0x6e
 
 #define EC_FAN_NAME_SIZE	20
 
@@ -469,7 +470,7 @@ static ssize_t charge_control_thresholds_show(struct device *dev,
 	u8 resp[8];
 	int ret, start = 0, end = 0;
 
-	ret = qcom_ec_read(ec, 0x6e, 2, resp);
+	ret = qcom_ec_read(ec, EC_CHARGE_THRESHOLD_CMD, 2, resp);
 	if (ret < 0)
 		return ret;
 
@@ -482,14 +483,20 @@ static ssize_t charge_control_thresholds_store(struct device *dev,
 		struct device_attribute *attr,
 		const char *buf, size_t size)
 {
-	int start, end;
+	struct i2c_client *client = to_i2c_client(dev);
+	struct magicbook_ec *ec = i2c_get_clientdata(client);
+	int start, end, ret;
 
 	if (sscanf(buf, "%d %d", &start, &end) != 2)
 		return -EINVAL;
 
-	// err = huawei_wmi_battery_set(start, end);
-	// if (err)
-	// 	return err;
+	ret = qcom_ec_write(ec, 0x6e /* Charging start */, 0x1, start);
+	if (ret)
+		return ret;
+
+	ret = qcom_ec_write(ec, 0x6f /* Charging end register */, 0x1, end);
+	if (ret)
+		return ret;
 
 	return size;
 }
