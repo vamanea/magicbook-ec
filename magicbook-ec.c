@@ -11,21 +11,17 @@
 #include <linux/input/sparse-keymap.h>
 #include <linux/leds.h>
 
-#define EC_SCI_EVT_READ_CMD	0x05
-#define EC_FW_VERSION_CMD	0x0e
-#define EC_MODERN_STANDBY_CMD	0x23
-#define EC_SCREEN_NOTIFY_CMD	0x0b
-#define EC_FAN_DBG_CONTROL_CMD	0x30
-#define EC_SCI_EVT_CONTROL_CMD	0x35
-#define EC_THERMAL_CAP_CMD	0x42
-#define EC_KEYBD_BACKLIGHT_CMD  0x53
-#define EC_CHARGE_THRESHOLD_CMD 0x6e
+#define EC_SCI_EVT_READ_CMD	        0x05
+#define EC_MODERN_STANDBY_CMD	    0x23
+#define EC_SCREEN_NOTIFY_CMD	    0x0b
+#define EC_FAN_DBG_CONTROL_CMD	    0x30
+#define EC_SCI_EVT_CONTROL_CMD	    0x35
+#define EC_THERMAL_CAP_CMD          0x42
+#define EC_KEYBD_BACKLIGHT_CMD      0x53
+#define EC_CHARGE_THRESHOLD_CMD     0x6e
+#define EC_CHARGE_THRESHOLD_END_CMD 0x6e
 
 #define EC_FAN_NAME_SIZE	20
-
-#define EC_IRQ_REASON_REG 0x05
-#define EC_SUSPEND_RESUME_REG 0x23
-#define EC_IRQ_ENABLE_REG 0x35
 
 #define EC_NOTIFY_SUSPEND_ENTER 0x01
 #define EC_NOTIFY_SUSPEND_EXIT 0x00
@@ -273,7 +269,7 @@ static irqreturn_t magicbook_ec_irq(int irq, void *data)
 
 	guard(mutex)(&ec->lock);
 
-	val = i2c_smbus_read_byte_data(ec->client, EC_IRQ_REASON_REG);
+	val = i2c_smbus_read_byte_data(ec->client, EC_SCI_EVT_READ_CMD);
 	if (val < 0) {
 		dev_err(dev, "Failed to get EC IRQ reason: %d\n", val);
 		return IRQ_HANDLED;
@@ -552,7 +548,7 @@ static int magicbook_ec_probe(struct i2c_client *client)
 	int ret;
 
 	// Disable the IRQ first
-	ret = i2c_smbus_write_byte_data(client, EC_IRQ_ENABLE_REG, 0x00);
+	ret = i2c_smbus_write_byte_data(client, EC_SCI_EVT_CONTROL_CMD, 0x00);
 	if (ret < 0)
 		return ret;
 
@@ -595,7 +591,7 @@ static int magicbook_ec_probe(struct i2c_client *client)
 	if (ret < 0)
 		return dev_err_probe(dev, ret, "Failed to setup battery attributes\n");
 
-	ret = i2c_smbus_write_byte_data(client, EC_IRQ_ENABLE_REG, 0x01);
+	ret = i2c_smbus_write_byte_data(client, EC_SCI_EVT_CONTROL_CMD, 0x01);
 	if (ret < 0)
 		return dev_err_probe(dev, ret, "Failed to enable interrupts\n");
 
@@ -607,7 +603,7 @@ static void magicbook_ec_remove(struct i2c_client *client)
 	struct device *dev = &client->dev;
 
 	int ret;
-	ret = i2c_smbus_write_byte_data(client, EC_IRQ_ENABLE_REG, 0x00);
+	ret = i2c_smbus_write_byte_data(client, EC_SCI_EVT_CONTROL_CMD, 0x00);
 	if (ret < 0)
 		dev_err(dev, "Failed to disable interrupts: %d\n", ret);
 
@@ -628,11 +624,11 @@ static int magicbook_ec_suspend(struct device *dev)
 		dev_err(dev, "Failed to notify screen on %d\n", ret);
 	}
 
-	ret = i2c_smbus_write_byte_data(client, EC_SUSPEND_RESUME_REG, EC_NOTIFY_SUSPEND_ENTER);
+	ret = i2c_smbus_write_byte_data(client, EC_MODERN_STANDBY_CMD, EC_NOTIFY_SUSPEND_ENTER);
 	if (ret)
 		return ret;
 
-	//ret = i2c_smbus_write_byte_data(client, EC_IRQ_ENABLE_REG, 0x0);
+	//ret = i2c_smbus_write_byte_data(client, EC_SCI_EVT_CONTROL_CMD, 0x0);
 	if (ret < 0)
 		dev_err_probe(dev, ret, "Failed to disable interrupts %d\n", ret);
 
@@ -647,13 +643,12 @@ static int magicbook_ec_resume(struct device *dev)
 	int ret;
 
 
-	ret = i2c_smbus_write_byte_data(client, EC_IRQ_ENABLE_REG, 0x01);
+	ret = i2c_smbus_write_byte_data(client, EC_SCI_EVT_CONTROL_CMD, 0x01);
 	if (ret < 0)
 		dev_err(dev, "Failed to enable interrupts %d\n", ret);
 
 
-
-	ret = i2c_smbus_write_byte_data(client, EC_SUSPEND_RESUME_REG, EC_NOTIFY_SUSPEND_EXIT);
+	ret = i2c_smbus_write_byte_data(client, EC_MODERN_STANDBY_CMD, EC_NOTIFY_SUSPEND_EXIT);
 	if (ret)
 		return ret;
 
