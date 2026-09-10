@@ -487,7 +487,7 @@ static ssize_t charge_control_thresholds_store(struct device *dev,
 	ret = qcom_ec_write(ec, 0x6e /* Charging start */, 0x1, start);
 	if (ret)
 		return ret;
-
+	msleep(5);
 	ret = qcom_ec_write(ec, 0x6f /* Charging end register */, 0x1, end);
 	if (ret)
 		return ret;
