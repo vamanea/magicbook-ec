@@ -404,26 +404,26 @@ static ssize_t bat_input_show(struct device *dev,
 static SENSOR_DEVICE_ATTR_2(in0_input, 0444, bat_input_show, NULL, 0x40, 0);
 static SENSOR_DEVICE_ATTR_RO(in0_label, label, 0);
 /* Define the sysfs attribute, first paramter is the register, second is high or low */
-static SENSOR_DEVICE_ATTR_2(fan1_input, 0444, fan1_input_show, NULL, 0x30, 0);
-static SENSOR_DEVICE_ATTR_2(fan1_target, 0444, fan1_input_show, NULL, 0x30, 1);
+static SENSOR_DEVICE_ATTR_2_RO(fan1_input, fan1_input,  0x30, 0);
+static SENSOR_DEVICE_ATTR_2_RO(fan1_target, fan1_input, 0x30, 1);
 static SENSOR_DEVICE_ATTR_RO(fan1_label, label, 1);
-static SENSOR_DEVICE_ATTR_2(fan2_input, 0444, fan1_input_show, NULL, 0x34, 0);
-static SENSOR_DEVICE_ATTR_2(fan2_target, 0444, fan1_input_show, NULL, 0x34, 1);
+static SENSOR_DEVICE_ATTR_2_RO(fan2_input, fan1_input, 0x34, 0);
+static SENSOR_DEVICE_ATTR_2_RO(fan2_target, fan1_input, 0x34, 1);
 static SENSOR_DEVICE_ATTR_RO(fan2_label, label, 2);
 /* Thermal Sensors from the EC, seem to be the ones who drive the fans */
-static SENSOR_DEVICE_ATTR_2(temp1_input, 0444, temp_input_show, NULL, 0x10, 0);
+static SENSOR_DEVICE_ATTR_2_RO(temp1_input, temp_input, 0x10, 0);
 static SENSOR_DEVICE_ATTR_RO(temp1_label, label, 3);
-static SENSOR_DEVICE_ATTR_2(temp2_input, 0444, temp_input_show, NULL, 0x12, 0);
+static SENSOR_DEVICE_ATTR_2_RO(temp2_input, temp_input, 0x12, 0);
 static SENSOR_DEVICE_ATTR_RO(temp2_label, label, 4);
-static SENSOR_DEVICE_ATTR_2(temp3_input, 0444, temp_input_show, NULL, 0x14, 0);
+static SENSOR_DEVICE_ATTR_2_RO(temp3_input, temp_input, 0x14, 0);
 static SENSOR_DEVICE_ATTR_RO(temp3_label, label, 5);
-static SENSOR_DEVICE_ATTR_2(temp4_input, 0444, temp_input_show, NULL, 0x16, 0);
+static SENSOR_DEVICE_ATTR_2_RO(temp4_input, temp_input, 0x16, 0);
 static SENSOR_DEVICE_ATTR_RO(temp4_label, label, 6);
-static SENSOR_DEVICE_ATTR_2(temp5_input, 0444, temp_input_show, NULL, 0x18, 0);
+static SENSOR_DEVICE_ATTR_2_RO(temp5_input, temp_input, 0x18, 0);
 static SENSOR_DEVICE_ATTR_RO(temp5_label, label, 7);
-static SENSOR_DEVICE_ATTR_2(temp6_input, 0444, temp_input_show, NULL, 0x1a, 0);
+static SENSOR_DEVICE_ATTR_2_RO(temp6_input, temp_input, 0x1a, 0);
 static SENSOR_DEVICE_ATTR_RO(temp6_label, label, 8);
-static SENSOR_DEVICE_ATTR_2(temp7_input, 0444, temp_input_show, NULL, 0x1c, 0);
+static SENSOR_DEVICE_ATTR_2_RO(temp7_input, temp_input, 0x1c, 0);
 static SENSOR_DEVICE_ATTR_RO(temp7_label, label, 9);
 /* Group the attributes */
 static struct attribute *ec_sensors_attrs[] = {
