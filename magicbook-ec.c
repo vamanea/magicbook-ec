@@ -541,6 +541,7 @@ static ssize_t kbd_backlight_timeout_store(struct device *dev,
 	if (ret)
 		return ret;
 
+	// The timeout is in seconds as a u16, 0x54 is low and 0x55 is high
 	ret = qcom_ec_write(ec, 0x54 /* SKBT */ ,0x1, timeout & 0xFF);
 	if (ret < 0)
 		return ret;
@@ -552,14 +553,98 @@ static ssize_t kbd_backlight_timeout_store(struct device *dev,
 	return size;
 }
 
+
+static ssize_t fn_mode_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct magicbook_ec *ec = i2c_get_clientdata(client);
+	u8 resp[8];
+	int ret;
+
+	ret = qcom_ec_read(ec, 0x72, 1, resp);
+	if (ret < 0)
+		return ret;
+
+	return sysfs_emit(buf, "%d\n", resp[0]);
+}
+
+static ssize_t fn_mode_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct magicbook_ec *ec = i2c_get_clientdata(client);
+	int ret;
+	u8 fn_mode;
+
+	ret = kstrtou8(buf, 0, &fn_mode);
+	if (ret)
+		return ret;
+
+	fn_mode = clamp(fn_mode, 0, 1);
+
+	// The timeout is in seconds as a u16, 0x54 is low and 0x55 is high
+	ret = qcom_ec_write(ec, 0x72 /* SMKR */ ,0x1, fn_mode);
+	if (ret < 0)
+		return ret;
+
+	return size;
+}
+
+static ssize_t fn_restore_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct magicbook_ec *ec = i2c_get_clientdata(client);
+	u8 resp[8];
+	int ret;
+
+	ret = qcom_ec_read(ec, 0x75, 1, resp);
+	if (ret < 0)
+		return ret;
+
+	return sysfs_emit(buf, "%d\n", resp[0]);
+}
+
+static ssize_t fn_restore_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct magicbook_ec *ec = i2c_get_clientdata(client);
+	int ret;
+	u8 fn_mode;
+
+	ret = kstrtou8(buf, 0, &fn_mode);
+	if (ret)
+		return ret;
+
+	fn_mode = clamp(fn_mode, 1, 2);
+
+	ret = qcom_ec_write(ec, 0x75 /* FKRS */ ,0x1, fn_mode);
+	if (ret < 0)
+		return ret;
+
+	return size;
+}
+
 static DEVICE_ATTR_WO(kbd_backlight_level);
 static DEVICE_ATTR_RW(kbd_backlight_timeout);
+
+static DEVICE_ATTR_RW(fn_mode);
+static DEVICE_ATTR_RW(fn_restore);
 
 static struct attribute *magicbook_ec_attrs[] = {
     &dev_attr_charge_control_thresholds.attr,
 
     &dev_attr_kbd_backlight_level.attr,
     &dev_attr_kbd_backlight_timeout.attr,
+
+    &dev_attr_fn_mode.attr,
+    &dev_attr_fn_restore.attr,
     NULL, // Must be null-terminated
 };
 
