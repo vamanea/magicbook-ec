@@ -220,12 +220,8 @@ static enum led_brightness ec_kbd_bl_get(struct led_classdev *led_cdev)
 	dev_dbg(ec->dev, "Reported brightnes: %u", brightness);
 	if (brightness == 0xF) {
 		return brightness;
-	} else if (brightness <= 2) {
-		return 0;
-	} else if (brightness > 4) {
-		return 2;
 	} else {
-		return brightness - 2;
+		return clamp(brightness, 2, 4) - 2;
 	}
 }
 
@@ -236,10 +232,9 @@ static int ec_kbd_bl_set(struct led_classdev *led_cdev,
 					  kbd_backlight);
 	int ret;
 
-	if (brightness >= 0 && brightness <= led_cdev->max_brightness) {
-		brightness += 2;
-	} else if (brightness != 0xF) {
-		brightness = 2;
+	// 0xF is the value for auto so write it as is
+	if (brightness != 0xF) {
+		brightness = 2 + clamp(brightness, 0, led_cdev->max_brightness);
 	}
 
 	ret = qcom_ec_write(ec, EC_KEYBD_BACKLIGHT_CMD, 0x2, brightness);
